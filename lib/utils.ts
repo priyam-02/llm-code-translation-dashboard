@@ -38,9 +38,9 @@ export function calculateMetrics(data: BenchmarkResult[]) {
   return {
     totalTranslations: data.length,
     uniqueProblems,
-    compileRate: Math.round(compileRate * 10) / 10,
-    runtimeSuccessRate: Math.round(runtimeSuccessRate * 10) / 10,
-    testPassRate: Math.round(testPassRate * 10) / 10,
+    compileRate: Math.round(compileRate * 100) / 100,
+    runtimeSuccessRate: Math.round(runtimeSuccessRate * 100) / 100,
+    testPassRate: Math.round(testPassRate * 100) / 100,
   };
 }
 
