@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BenchmarkResult, Filters } from "@/types";
+import { BenchmarkResult, Filters, StaticMetric } from "@/types";
 import FilterPanel from "@/components/FilterPanel";
 import MetricCard from "@/components/MetricCard";
 import LLMPerformanceChart from "@/components/LLMPerformanceChart";
@@ -9,6 +9,10 @@ import ComplexityChart from "@/components/ComplexityChart";
 import LanguageChart from "@/components/LanguageChart";
 import PromptChart from "@/components/PromptChart";
 import HeatmapChart from "@/components/HeatmapChart";
+import ComplexityVariationChart from "@/components/ComplexityVariationChart";
+import VariationByLanguageChart from "@/components/VariationByLanguageChart";
+import VariationByPromptChart from "@/components/VariationByPromptChart";
+import VariationByLLMChart from "@/components/VariationByLLMChart";
 import {
   filterData,
   calculateMetrics,
@@ -17,10 +21,15 @@ import {
   getLanguagePerformance,
   getPromptPerformance,
   getHeatmapData,
+  getComplexityVariationData,
+  getLanguageVariationData,
+  getPromptVariationData,
+  getLLMVariationData,
 } from "@/lib/utils";
 
 export default function Dashboard() {
   const [data, setData] = useState<BenchmarkResult[]>([]);
+  const [staticMetrics, setStaticMetrics] = useState<StaticMetric[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({
     language: "all",
@@ -35,18 +44,28 @@ export default function Dashboard() {
   const [complexities, setComplexities] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch("/benchmark_data.json")
-      .then((res) => res.json())
-      .then((jsonData: BenchmarkResult[]) => {
-        setData(jsonData);
-        setLanguages(
-          Array.from(new Set(jsonData.map((d) => d.target_language))).sort()
-        );
-        setLlms(Array.from(new Set(jsonData.map((d) => d.llm))).sort());
-        setPrompts(Array.from(new Set(jsonData.map((d) => d.prompt))).sort());
-        setComplexities(["simple", "moderate", "complex"]);
-        setLoading(false);
-      })
+    // Load both benchmark data and static metrics in parallel
+    Promise.all([
+      fetch("/benchmark_data.json").then((res) => res.json()),
+      fetch("/static_metrics.json").then((res) => res.json()),
+    ])
+      .then(
+        ([benchmarkData, metricsData]: [BenchmarkResult[], StaticMetric[]]) => {
+          setData(benchmarkData);
+          setStaticMetrics(metricsData);
+          setLanguages(
+            Array.from(
+              new Set(benchmarkData.map((d) => d.target_language))
+            ).sort()
+          );
+          setLlms(Array.from(new Set(benchmarkData.map((d) => d.llm))).sort());
+          setPrompts(
+            Array.from(new Set(benchmarkData.map((d) => d.prompt))).sort()
+          );
+          setComplexities(["simple", "moderate", "complex"]);
+          setLoading(false);
+        }
+      )
       .catch((error) => {
         console.error("Error loading data:", error);
         setLoading(false);
@@ -78,6 +97,35 @@ export default function Dashboard() {
   const languagePerformance = getLanguagePerformance(filteredData);
   const promptPerformance = getPromptPerformance(filteredData);
   const heatmapData = getHeatmapData(filteredData);
+
+  // Variation data from static metrics (static - for key insights)
+  const staticComplexityVariation = getComplexityVariationData(staticMetrics, {
+    language: "all",
+    llm: "all",
+    prompt: "all",
+    complexity: "all",
+  });
+  const staticLanguageVariation = getLanguageVariationData(staticMetrics, {
+    language: "all",
+    llm: "all",
+    prompt: "all",
+    complexity: "all",
+  });
+  const staticPromptVariation = getPromptVariationData(staticMetrics, {
+    language: "all",
+    llm: "all",
+    prompt: "all",
+    complexity: "all",
+  });
+
+  // Variation data from static metrics (filtered)
+  const complexityVariation = getComplexityVariationData(
+    staticMetrics,
+    filters
+  );
+  const languageVariation = getLanguageVariationData(staticMetrics, filters);
+  const promptVariation = getPromptVariationData(staticMetrics, filters);
+  const llmVariation = getLLMVariationData(staticMetrics, filters);
 
   return (
     <div className="min-h-screen">
@@ -184,27 +232,43 @@ export default function Dashboard() {
                 </p>
               </div>
             )}
-            {staticPromptPerformance.length > 0 && (
+            {staticPromptPerformance.length > 0 && staticPromptVariation.length > 0 && (
               <div className="flex items-start">
                 <span className="inline-block w-2 h-2 bg-gray-900 rounded-full mt-2 mr-3"></span>
                 <p className="text-gray-700">
-                  <strong>Most Effective Prompt:</strong>{" "}
-                  {staticPromptPerformance[0].name} with{" "}
-                  {staticPromptPerformance[0].testPassRate.toFixed(2)}% test
-                  pass rate
+                  <strong>Most Effective Prompt Strategy:</strong>{" "}
+                  {staticPromptPerformance[0].name} achieves{" "}
+                  {staticPromptPerformance[0].testPassRate.toFixed(2)}% pass rate while producing{" "}
+                  {staticPromptVariation[0].deltaLOC > 0 ? "longer" : "more concise"} code (
+                  {staticPromptVariation[0].deltaLOC > 0 ? "+" : ""}
+                  {staticPromptVariation[0].deltaLOC.toFixed(2)}Δ SLoC)
                 </p>
               </div>
             )}
-            <div className="flex items-start">
-              <span className="inline-block w-2 h-2 bg-gray-900 rounded-full mt-2 mr-3"></span>
-              <p className="text-gray-700">
-                <strong>Complexity Impact:</strong> Performance drops from{" "}
-                {staticComplexityPerformance[0]?.testPassRate.toFixed(2)}%
-                (simple) to{" "}
-                {staticComplexityPerformance[2]?.testPassRate.toFixed(2)}%
-                (complex)
-              </p>
-            </div>
+            {staticComplexityPerformance.length > 0 && staticComplexityVariation.length > 0 && (
+              <div className="flex items-start">
+                <span className="inline-block w-2 h-2 bg-gray-900 rounded-full mt-2 mr-3"></span>
+                <p className="text-gray-700">
+                  <strong>Complexity Impact:</strong> Performance drops from{" "}
+                  {staticComplexityPerformance[0]?.testPassRate.toFixed(2)}% (simple) to{" "}
+                  {staticComplexityPerformance[2]?.testPassRate.toFixed(2)}% (complex), with simple problems showing greater cyclomatic complexity increase (
+                  {staticComplexityVariation[0]?.deltaCClog.toFixed(2)}Δ vs{" "}
+                  {staticComplexityVariation[2]?.deltaCClog.toFixed(2)}Δ)
+                </p>
+              </div>
+            )}
+            {staticLanguageVariation.length > 0 && (
+              <div className="flex items-start">
+                <span className="inline-block w-2 h-2 bg-gray-900 rounded-full mt-2 mr-3"></span>
+                <p className="text-gray-700">
+                  <strong>Code Length Variation:</strong>{" "}
+                  {staticLanguageVariation[0].name} translations show{" "}
+                  {staticLanguageVariation[0].deltaLOC > 0 ? "an increase" : "a decrease"} (
+                  {staticLanguageVariation[0].deltaLOC > 0 ? "+" : ""}
+                  {staticLanguageVariation[0].deltaLOC.toFixed(2)}Δ) in source lines of code
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -264,6 +328,17 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Performance Analysis Section */}
+        <div className="mt-12 mb-10 glass rounded-2xl shadow-lg p-6 border border-white/20 fade-in">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Performance Analysis
+          </h2>
+          <p className="text-sm text-gray-600 mb-6">
+            Analysis of translation quality across compilation failures, runtime
+            errors, test failures, and overall test pass rates.
+          </p>
+        </div>
+
         <div className="space-y-8">
           <LLMPerformanceChart data={llmPerformance} filters={filters} />
 
@@ -274,6 +349,35 @@ export default function Dashboard() {
 
           <PromptChart data={promptPerformance} filters={filters} />
           <HeatmapChart data={heatmapData} />
+        </div>
+
+        {/* Code Variation Analysis Section */}
+        <div className="mt-12 mb-10 glass rounded-2xl shadow-lg p-6 border border-white/20 fade-in">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Code Variation Analysis
+          </h2>
+          <p className="text-sm text-gray-600 mb-6">
+            Analyze how translated code differs from source code in terms of
+            cyclomatic complexity (ΔCC) and source lines of code (ΔSLoC).
+          </p>
+        </div>
+
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <ComplexityVariationChart
+              data={complexityVariation}
+              filters={filters}
+            />
+            <VariationByLanguageChart
+              data={languageVariation}
+              filters={filters}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <VariationByPromptChart data={promptVariation} filters={filters} />
+            <VariationByLLMChart data={llmVariation} filters={filters} />
+          </div>
         </div>
       </main>
 

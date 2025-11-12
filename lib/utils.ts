@@ -1,4 +1,4 @@
-import { BenchmarkResult, Filters } from "@/types";
+import { BenchmarkResult, Filters, StaticMetric, VariationData } from "@/types";
 
 export function filterData(
   data: BenchmarkResult[],
@@ -207,4 +207,176 @@ export function getSuccessBgColor(value: number): string {
   if (value >= 60) return "bg-green-100";
   if (value >= 30) return "bg-yellow-100";
   return "bg-red-100";
+}
+
+// Static metrics filtering and aggregation functions
+
+export function filterStaticMetrics(
+  metrics: StaticMetric[],
+  filters: Filters
+): StaticMetric[] {
+  return metrics.filter((metric) => {
+    if (filters.language !== "all" && metric.Language !== "all" && metric.Language !== filters.language)
+      return false;
+    if (filters.llm !== "all" && metric.LLM !== "all" && metric.LLM !== filters.llm)
+      return false;
+    if (filters.prompt !== "all" && metric.Prompt !== "all" && metric.Prompt.toLowerCase() !== filters.prompt.toLowerCase())
+      return false;
+    if (filters.complexity !== "all" && metric.Complexity !== "all" && metric.Complexity !== filters.complexity)
+      return false;
+    return true;
+  });
+}
+
+export function getComplexityVariationData(
+  metrics: StaticMetric[],
+  filters: Filters
+): VariationData[] {
+  // If complexity filter is set to specific value, only show that one
+  const complexityOrder = filters.complexity === "all"
+    ? ["simple", "moderate", "complex"]
+    : [filters.complexity];
+
+  // Find entries where Language=all, LLM=all, Prompt=all, Complexity=specific
+  const filtered = metrics.filter(
+    (m) =>
+      m.Language === (filters.language === "all" ? "all" : filters.language) &&
+      m.LLM === (filters.llm === "all" ? "all" : filters.llm) &&
+      m.Prompt === (filters.prompt === "all" ? "all" : filters.prompt) &&
+      m.Complexity !== "all"
+  );
+
+  return complexityOrder
+    .map((complexity) => {
+      const metric = filtered.find((m) => m.Complexity === complexity);
+      if (!metric) return null;
+
+      return {
+        name: complexity.charAt(0).toUpperCase() + complexity.slice(1),
+        deltaCClog: metric.DeltaCClog,
+        minDeltaCC: metric.MinDeltaCC,
+        maxDeltaCC: metric.MaxDeltaCC,
+        deltaLOC: metric.DeltaLOC,
+        minDeltaLOC: metric.MinDeltaLOC,
+        maxDeltaLOC: metric.MaxDeltaLOC,
+      };
+    })
+    .filter((item): item is VariationData => item !== null);
+}
+
+export function getLanguageVariationData(
+  metrics: StaticMetric[],
+  filters: Filters
+): VariationData[] {
+  // If language filter is set to specific value, only show that one
+  const languages = filters.language === "all"
+    ? ["python", "java", "rust"]
+    : [filters.language];
+
+  // Find entries where Language=specific, LLM=all, Prompt=all, Complexity=all
+  const filtered = metrics.filter(
+    (m) =>
+      m.Language !== "all" &&
+      m.LLM === (filters.llm === "all" ? "all" : filters.llm) &&
+      m.Prompt === (filters.prompt === "all" ? "all" : filters.prompt) &&
+      m.Complexity === (filters.complexity === "all" ? "all" : filters.complexity)
+  );
+
+  return languages
+    .map((language) => {
+      const metric = filtered.find((m) => m.Language === language);
+      if (!metric) return null;
+
+      return {
+        name: language.charAt(0).toUpperCase() + language.slice(1),
+        deltaCClog: metric.DeltaCClog,
+        minDeltaCC: metric.MinDeltaCC,
+        maxDeltaCC: metric.MaxDeltaCC,
+        deltaLOC: metric.DeltaLOC,
+        minDeltaLOC: metric.MinDeltaLOC,
+        maxDeltaLOC: metric.MaxDeltaLOC,
+      };
+    })
+    .filter((item): item is VariationData => item !== null)
+    .sort((a, b) => b.deltaLOC - a.deltaLOC);
+}
+
+export function getPromptVariationData(
+  metrics: StaticMetric[],
+  filters: Filters
+): VariationData[] {
+  // If prompt filter is set to specific value, only show that one
+  const prompts = filters.prompt === "all"
+    ? ["standard zero-shot", "curated zero-shot", "chain-of-thought"]
+    : [filters.prompt];
+
+  // Find entries where Language=all, LLM=all, Prompt=specific, Complexity=all
+  const filtered = metrics.filter(
+    (m) =>
+      m.Language === (filters.language === "all" ? "all" : filters.language) &&
+      m.LLM === (filters.llm === "all" ? "all" : filters.llm) &&
+      m.Prompt !== "all" &&
+      m.Complexity === (filters.complexity === "all" ? "all" : filters.complexity)
+  );
+
+  return prompts
+    .map((prompt) => {
+      const metric = filtered.find((m) => m.Prompt.toLowerCase() === prompt);
+      if (!metric) return null;
+
+      return {
+        name: formatPromptName(prompt),
+        deltaCClog: metric.DeltaCClog,
+        minDeltaCC: metric.MinDeltaCC,
+        maxDeltaCC: metric.MaxDeltaCC,
+        deltaLOC: metric.DeltaLOC,
+        minDeltaLOC: metric.MinDeltaLOC,
+        maxDeltaLOC: metric.MaxDeltaLOC,
+      };
+    })
+    .filter((item): item is VariationData => item !== null);
+}
+
+export function getLLMVariationData(
+  metrics: StaticMetric[],
+  filters: Filters
+): VariationData[] {
+  const allLlms = [
+    "llama3.1_70b",
+    "llama3.1",
+    "qwen2.5-coder_32b",
+    "qwen2.5_32b",
+    "qwen2.5-coder",
+    "deepseek-coder-v2",
+    "deepseek-coder_33b",
+  ];
+
+  // If LLM filter is set to specific value, only show that one
+  const llms = filters.llm === "all" ? allLlms : [filters.llm];
+
+  // Find entries where Language=all, LLM=specific, Prompt=all, Complexity=all
+  const filtered = metrics.filter(
+    (m) =>
+      m.Language === (filters.language === "all" ? "all" : filters.language) &&
+      m.LLM !== "all" &&
+      m.Prompt === (filters.prompt === "all" ? "all" : filters.prompt) &&
+      m.Complexity === (filters.complexity === "all" ? "all" : filters.complexity)
+  );
+
+  return llms
+    .map((llm) => {
+      const metric = filtered.find((m) => m.LLM === llm);
+      if (!metric) return null;
+
+      return {
+        name: formatLLMName(llm),
+        deltaCClog: metric.DeltaCClog,
+        minDeltaCC: metric.MinDeltaCC,
+        maxDeltaCC: metric.MaxDeltaCC,
+        deltaLOC: metric.DeltaLOC,
+        minDeltaLOC: metric.MinDeltaLOC,
+        maxDeltaLOC: metric.MaxDeltaLOC,
+      };
+    })
+    .filter((item): item is VariationData => item !== null);
 }

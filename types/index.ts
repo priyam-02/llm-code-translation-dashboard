@@ -44,3 +44,44 @@ export interface ChartData {
   value: number;
   [key: string]: any;
 }
+
+export interface StaticMetric {
+  LLM: string;
+  Prompt: string;
+  Language: string;
+  Complexity: string;
+  Total: number;
+  "No Compile": number;
+  Compile: number;
+  "No Run": number;
+  Run: number;
+  "No Pass": number;
+  Pass: number;
+  Max_CC_Var: number;
+  Min_CC_Var: number;
+  Avg_CC_Var: number;
+  Max_SLLoC_Var: number;
+  Min_SLoC_Var: number;
+  Avg_SLoC_Var: number;
+  _: null;
+  language: string;
+  "LLM.1": string;
+  "Prompt.1": string;
+  "Complexity.1": string;
+  DeltaCClog: number;
+  MinDeltaCC: number;
+  MaxDeltaCC: number;
+  DeltaLOC: number;
+  MinDeltaLOC: number;
+  MaxDeltaLOC: number;
+}
+
+export interface VariationData {
+  name: string;
+  deltaCClog: number;
+  minDeltaCC: number;
+  maxDeltaCC: number;
+  deltaLOC: number;
+  minDeltaLOC: number;
+  maxDeltaLOC: number;
+}
