@@ -237,12 +237,21 @@ export function getComplexityVariationData(
     ? ["simple", "moderate", "complex"]
     : [filters.complexity];
 
-  // Find entries where Language=all, LLM=all, Prompt=all, Complexity=specific
+  // Map prompt filter value to Google Sheets abbreviation
+  const promptMapping: { [key: string]: string } = {
+    'standard zero-shot': 'S-ZS',
+    'curated zero-shot': 'C-ZS',
+    'chain-of-thought': 'CoT',
+    'all': 'all',
+  };
+  const promptValue = promptMapping[filters.prompt] || filters.prompt;
+
+  // Find entries where Language=all, LLM=all, Prompt=filtered, Complexity=specific
   const filtered = metrics.filter(
     (m) =>
       m.Language === (filters.language === "all" ? "all" : filters.language) &&
       m.LLM === (filters.llm === "all" ? "all" : filters.llm) &&
-      m.Prompt === (filters.prompt === "all" ? "all" : filters.prompt) &&
+      m.Prompt === promptValue &&
       m.Complexity !== "all"
   );
 
@@ -273,12 +282,21 @@ export function getLanguageVariationData(
     ? ["python", "java", "rust"]
     : [filters.language];
 
-  // Find entries where Language=specific, LLM=all, Prompt=all, Complexity=all
+  // Map prompt filter value to Google Sheets abbreviation
+  const promptMapping: { [key: string]: string } = {
+    'standard zero-shot': 'S-ZS',
+    'curated zero-shot': 'C-ZS',
+    'chain-of-thought': 'CoT',
+    'all': 'all',
+  };
+  const promptValue = promptMapping[filters.prompt] || filters.prompt;
+
+  // Find entries where Language=specific, LLM=all, Prompt=filtered, Complexity=all
   const filtered = metrics.filter(
     (m) =>
       m.Language !== "all" &&
       m.LLM === (filters.llm === "all" ? "all" : filters.llm) &&
-      m.Prompt === (filters.prompt === "all" ? "all" : filters.prompt) &&
+      m.Prompt === promptValue &&
       m.Complexity === (filters.complexity === "all" ? "all" : filters.complexity)
   );
 
@@ -305,10 +323,22 @@ export function getPromptVariationData(
   metrics: StaticMetric[],
   filters: Filters
 ): VariationData[] {
-  // If prompt filter is set to specific value, only show that one
-  const prompts = filters.prompt === "all"
-    ? ["standard zero-shot", "curated zero-shot", "chain-of-thought"]
-    : [filters.prompt];
+  // Map of prompt abbreviations to full names
+  const promptMapping: { [key: string]: string } = {
+    'S-ZS': 'standard zero-shot',
+    'C-ZS': 'curated zero-shot',
+    'CoT': 'chain-of-thought',
+    'standard zero-shot': 'standard zero-shot',
+    'curated zero-shot': 'curated zero-shot',
+    'chain-of-thought': 'chain-of-thought',
+  };
+
+  // Reverse mapping (full name to abbreviation)
+  const reverseMapping: { [key: string]: string } = {
+    'standard zero-shot': 'S-ZS',
+    'curated zero-shot': 'C-ZS',
+    'chain-of-thought': 'CoT',
+  };
 
   // Find entries where Language=all, LLM=all, Prompt=specific, Complexity=all
   const filtered = metrics.filter(
@@ -319,13 +349,26 @@ export function getPromptVariationData(
       m.Complexity === (filters.complexity === "all" ? "all" : filters.complexity)
   );
 
-  return prompts
-    .map((prompt) => {
-      const metric = filtered.find((m) => m.Prompt.toLowerCase() === prompt);
+  // Get unique prompts from the filtered data
+  let availablePrompts = [...new Set(filtered.map(m => m.Prompt))];
+
+  // If a specific prompt is selected, filter to show only that one
+  if (filters.prompt !== "all") {
+    // Try to find the abbreviation for the selected prompt
+    const selectedAbbr = reverseMapping[filters.prompt] || filters.prompt;
+    availablePrompts = availablePrompts.filter(p => p === selectedAbbr || p === filters.prompt);
+  }
+
+  return availablePrompts
+    .map((promptKey) => {
+      const metric = filtered.find((m) => m.Prompt === promptKey);
       if (!metric) return null;
 
+      // Get display name from mapping, fallback to original if not found
+      const displayName = promptMapping[promptKey] || promptKey;
+
       return {
-        name: formatPromptName(prompt),
+        name: formatPromptName(displayName),
         deltaCClog: metric.DeltaCClog,
         minDeltaCC: metric.MinDeltaCC,
         maxDeltaCC: metric.MaxDeltaCC,
@@ -354,12 +397,21 @@ export function getLLMVariationData(
   // If LLM filter is set to specific value, only show that one
   const llms = filters.llm === "all" ? allLlms : [filters.llm];
 
-  // Find entries where Language=all, LLM=specific, Prompt=all, Complexity=all
+  // Map prompt filter value to Google Sheets abbreviation
+  const promptMapping: { [key: string]: string } = {
+    'standard zero-shot': 'S-ZS',
+    'curated zero-shot': 'C-ZS',
+    'chain-of-thought': 'CoT',
+    'all': 'all',
+  };
+  const promptValue = promptMapping[filters.prompt] || filters.prompt;
+
+  // Find entries where Language=all, LLM=specific, Prompt=filtered, Complexity=all
   const filtered = metrics.filter(
     (m) =>
       m.Language === (filters.language === "all" ? "all" : filters.language) &&
       m.LLM !== "all" &&
-      m.Prompt === (filters.prompt === "all" ? "all" : filters.prompt) &&
+      m.Prompt === promptValue &&
       m.Complexity === (filters.complexity === "all" ? "all" : filters.complexity)
   );
 

@@ -43,13 +43,27 @@ Install all required packages (this will take 1-2 minutes):
 npm install
 ```
 
-### Step 3: Start the Development Server
+### Step 3: Configure Google Sheets (Optional)
+
+The dashboard can fetch live data from Google Sheets or use static JSON files as fallback.
+
+**Option A: Use Static Data (No Setup Required)**
+- Skip this step - dashboard works immediately with included JSON files
+
+**Option B: Enable Live Google Sheets Integration**
+1. Copy `.env.example` to `.env.local`
+2. Add your Google API key and Sheet ID
+3. See [GOOGLE_SHEETS_SETUP.md](GOOGLE_SHEETS_SETUP.md) for detailed instructions
+
+The dashboard automatically falls back to static JSON if Google Sheets is unavailable.
+
+### Step 4: Start the Development Server
 
 ```bash
 npm run dev
 ```
 
-### Step 4: Open in Browser
+### Step 5: Open in Browser
 
 Once you see "Ready in XXXXms", open your web browser and navigate to:
 
@@ -61,19 +75,18 @@ The dashboard should now be visible! 🎉
 
 ## 🎯 Features
 
+- **Live Data Integration**: Fetches data from Google Sheets with automatic fallback to static JSON
 - **4 Interactive Filters**: Language, LLM Model, Prompt Type, and Problem Complexity (sticky on scroll)
 - **Real-time Updates**: All visualizations update instantly when filters change
-- **5 Key Metrics Cards**: Total translations, unique problems, compilation rate, runtime success, and test pass rate
-- **6 Visualizations**:
-  1. LLM Performance Comparison (bar chart)
-  2. Performance by Complexity Level (line chart)
-  3. Performance by Target Language (bar chart)
-  4. Prompt Strategy Effectiveness (pie chart)
-  5. LLM × Language Performance Heatmap
-  6. Key Insights Summary
+- **8 Metric Cards**: Total translations, unique problems, compilation failures, runtime errors, test failures, and pass rates
+- **10 Visualizations**:
+  - **Performance Analysis**: LLM performance, complexity impact, language comparison, prompt effectiveness, heatmap
+  - **Code Variation Analysis**: Complexity variation, language variation, prompt variation, LLM variation
+- **5 Key Insights**: Automatically calculated from full dataset
 - **Color-coded Results**: Green (≥60%), Yellow (30-60%), Red (<30%)
 - **Modern Glass Morphism UI**: Elegant, conference-ready design with smooth animations
 - **Responsive Design**: Works on desktop, tablet, and mobile
+- **Automatic Fallback**: Seamlessly switches to static data if API fails
 
 ## 📊 Data
 
@@ -128,25 +141,38 @@ npm install
 ```
 polyglot-dashboard/
 ├── app/
+│   ├── api/
+│   │   ├── benchmark-data/
+│   │   │   └── route.ts         # API endpoint for benchmark data
+│   │   └── static-metrics/
+│   │       └── route.ts         # API endpoint for static metrics
 │   ├── globals.css              # Global styles with animations
 │   ├── layout.tsx               # Root layout
 │   └── page.tsx                 # Main dashboard page
 ├── components/
 │   ├── FilterPanel.tsx          # Filter controls (sticky)
 │   ├── MetricCard.tsx           # Metric display cards
-│   ├── LLMPerformanceChart.tsx  # LLM comparison bar chart
-│   ├── ComplexityChart.tsx      # Complexity line chart
-│   ├── LanguageChart.tsx        # Language bar chart
-│   ├── PromptChart.tsx          # Prompt strategy pie chart
-│   └── HeatmapChart.tsx         # Heatmap visualization
+│   ├── LLMPerformanceChart.tsx  # LLM comparison chart
+│   ├── ComplexityChart.tsx      # Complexity performance chart
+│   ├── LanguageChart.tsx        # Language performance chart
+│   ├── PromptChart.tsx          # Prompt strategy chart
+│   ├── HeatmapChart.tsx         # Heatmap visualization
+│   ├── ComplexityVariationChart.tsx    # Code variation by complexity
+│   ├── VariationByLanguageChart.tsx    # Code variation by language
+│   ├── VariationByPromptChart.tsx      # Code variation by prompt
+│   └── VariationByLLMChart.tsx         # Code variation by LLM
 ├── lib/
-│   └── utils.ts                 # Data processing utilities
+│   ├── utils.ts                 # Data processing utilities
+│   └── google-sheets.ts         # Google Sheets API integration
 ├── types/
 │   └── index.ts                 # TypeScript type definitions
 ├── public/
-│   └── benchmark_data.json      # Benchmark data (56K+ translations)
+│   ├── benchmark_data.json      # Fallback: Benchmark data (56K+ translations)
+│   └── static_metrics.json      # Fallback: Static metrics data
+├── .env.local                   # Environment variables (not committed)
+├── .env.example                 # Environment variables template
 ├── CLAUDE.md                    # Claude Code guidance
-├── DASHBOARD_OVERVIEW.md        # High-level dashboard documentation
+├── GOOGLE_SHEETS_SETUP.md       # Google Sheets integration guide
 ├── package.json
 └── README.md
 ```
@@ -190,12 +216,24 @@ The production build will be faster and more optimized.
 
 ## 📦 Technologies Used
 
-- **Next.js 16** - React framework with App Router
+- **Next.js 16** - React framework with App Router and API routes
 - **React 19** - Latest React features
 - **TypeScript 5** - Type safety
 - **Tailwind CSS 3** - Utility-first CSS with custom animations
 - **Recharts 3** - Responsive chart library
+- **Google Sheets API** - Live data integration with googleapis
 - **Glass Morphism Design** - Modern UI with backdrop blur effects
+
+## 🔄 Data Management
+
+The dashboard supports two data sources:
+
+1. **Google Sheets (Live Data)** - Automatically fetches latest data from your Google Sheet
+2. **Static JSON Files (Fallback)** - Local JSON files used when API is unavailable
+
+**Automatic Fallback:** If Google Sheets API fails (no API key, rate limit, network error), the dashboard seamlessly switches to static JSON files. Users always see data, never errors.
+
+**Setup:** See [GOOGLE_SHEETS_SETUP.md](GOOGLE_SHEETS_SETUP.md) for complete Google Sheets integration guide.
 
 ## 💡 Tips for Conference Presentation
 

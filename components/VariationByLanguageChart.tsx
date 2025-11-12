@@ -65,9 +65,7 @@ export default function VariationByLanguageChart({
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="name" />
-          <YAxis
-            label={{ value: "Variation", angle: -90, position: "insideLeft" }}
-          />
+          <YAxis label={{ value: "Variation", angle: -90, position: "insideLeft" }} />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
           <Bar
