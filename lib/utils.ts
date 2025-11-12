@@ -350,7 +350,7 @@ export function getPromptVariationData(
   );
 
   // Get unique prompts from the filtered data
-  let availablePrompts = [...new Set(filtered.map(m => m.Prompt))];
+  let availablePrompts = Array.from(new Set(filtered.map(m => m.Prompt)));
 
   // If a specific prompt is selected, filter to show only that one
   if (filters.prompt !== "all") {
