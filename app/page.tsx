@@ -49,39 +49,43 @@ export default function Dashboard() {
       fetch("/api/benchmark-data").then((res) => res.json()),
       fetch("/api/static-metrics").then((res) => res.json()),
     ])
-      .then(
-        ([benchmarkResponse, metricsResponse]) => {
-          // Extract data from API response
-          const benchmarkData: BenchmarkResult[] = benchmarkResponse.data;
-          const metricsData: StaticMetric[] = metricsResponse.data;
+      .then(([benchmarkResponse, metricsResponse]) => {
+        // Extract data from API response
+        const benchmarkData: BenchmarkResult[] = benchmarkResponse.data;
+        const metricsData: StaticMetric[] = metricsResponse.data;
 
-          // Log data source for debugging
-          console.log('Benchmark data source:', benchmarkResponse.source);
-          console.log('Static metrics source:', metricsResponse.source);
+        // Log data source for debugging
+        console.log("Benchmark data source:", benchmarkResponse.source);
+        console.log("Static metrics source:", metricsResponse.source);
 
-          // Show warning if using fallback data
-          if (benchmarkResponse.source === 'fallback-json') {
-            console.warn('⚠️ Using fallback benchmark data:', benchmarkResponse.warning);
-          }
-          if (metricsResponse.source === 'fallback-json') {
-            console.warn('⚠️ Using fallback metrics data:', metricsResponse.warning);
-          }
-
-          setData(benchmarkData);
-          setStaticMetrics(metricsData);
-          setLanguages(
-            Array.from(
-              new Set(benchmarkData.map((d) => d.target_language))
-            ).sort()
+        // Show warning if using fallback data
+        if (benchmarkResponse.source === "fallback-json") {
+          console.warn(
+            "⚠️ Using fallback benchmark data:",
+            benchmarkResponse.warning
           );
-          setLlms(Array.from(new Set(benchmarkData.map((d) => d.llm))).sort());
-          setPrompts(
-            Array.from(new Set(benchmarkData.map((d) => d.prompt))).sort()
-          );
-          setComplexities(["simple", "moderate", "complex"]);
-          setLoading(false);
         }
-      )
+        if (metricsResponse.source === "fallback-json") {
+          console.warn(
+            "⚠️ Using fallback metrics data:",
+            metricsResponse.warning
+          );
+        }
+
+        setData(benchmarkData);
+        setStaticMetrics(metricsData);
+        setLanguages(
+          Array.from(
+            new Set(benchmarkData.map((d) => d.target_language))
+          ).sort()
+        );
+        setLlms(Array.from(new Set(benchmarkData.map((d) => d.llm))).sort());
+        setPrompts(
+          Array.from(new Set(benchmarkData.map((d) => d.prompt))).sort()
+        );
+        setComplexities(["simple", "moderate", "complex"]);
+        setLoading(false);
+      })
       .catch((error) => {
         console.error("Error loading data:", error);
         setLoading(false);
@@ -162,7 +166,17 @@ export default function Dashboard() {
               <span>📄</span>
               <span>Abstract</span>
             </a>
-            <span className="text-gray-300">|</span>
+            <span className="text-gray-400">|</span>
+            <a
+              href="https://figshare.com/s/555ff627c7b8944f4552"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 rounded-lg font-medium transition-all duration-200 border border-blue-200 hover:border-blue-300"
+            >
+              <span>📊</span>
+              <span>Results</span>
+            </a>
+            <span className="text-gray-400">|</span>
             <span className="text-gray-600 font-medium">Authors:</span>
             <div className="flex flex-wrap gap-x-3 gap-y-2">
               <a
@@ -248,40 +262,51 @@ export default function Dashboard() {
                 </p>
               </div>
             )}
-            {staticPromptPerformance.length > 0 && staticPromptVariation.length > 0 && (
-              <div className="flex items-start">
-                <span className="inline-block w-2 h-2 bg-gray-900 rounded-full mt-2 mr-3"></span>
-                <p className="text-gray-700">
-                  <strong>Most Effective Prompt Strategy:</strong>{" "}
-                  {staticPromptPerformance[0].name} achieves{" "}
-                  {staticPromptPerformance[0].testPassRate.toFixed(2)}% pass rate while producing{" "}
-                  {staticPromptVariation[0].deltaLOC > 0 ? "longer" : "more concise"} code (
-                  {staticPromptVariation[0].deltaLOC > 0 ? "+" : ""}
-                  {staticPromptVariation[0].deltaLOC.toFixed(2)}Δ SLoC)
-                </p>
-              </div>
-            )}
-            {staticComplexityPerformance.length > 0 && staticComplexityVariation.length > 0 && (
-              <div className="flex items-start">
-                <span className="inline-block w-2 h-2 bg-gray-900 rounded-full mt-2 mr-3"></span>
-                <p className="text-gray-700">
-                  <strong>Complexity Impact:</strong> Performance drops from{" "}
-                  {staticComplexityPerformance[0]?.testPassRate.toFixed(2)}% (simple) to{" "}
-                  {staticComplexityPerformance[2]?.testPassRate.toFixed(2)}% (complex), with simple problems showing greater cyclomatic complexity increase (
-                  {staticComplexityVariation[0]?.deltaCClog.toFixed(2)}Δ vs{" "}
-                  {staticComplexityVariation[2]?.deltaCClog.toFixed(2)}Δ)
-                </p>
-              </div>
-            )}
+            {staticPromptPerformance.length > 0 &&
+              staticPromptVariation.length > 0 && (
+                <div className="flex items-start">
+                  <span className="inline-block w-2 h-2 bg-gray-900 rounded-full mt-2 mr-3"></span>
+                  <p className="text-gray-700">
+                    <strong>Most Effective Prompt Strategy:</strong>{" "}
+                    {staticPromptPerformance[0].name} achieves{" "}
+                    {staticPromptPerformance[0].testPassRate.toFixed(2)}% pass
+                    rate while producing{" "}
+                    {staticPromptVariation[0].deltaLOC > 0
+                      ? "longer"
+                      : "more concise"}{" "}
+                    code ({staticPromptVariation[0].deltaLOC > 0 ? "+" : ""}
+                    {staticPromptVariation[0].deltaLOC.toFixed(2)}Δ SLoC)
+                  </p>
+                </div>
+              )}
+            {staticComplexityPerformance.length > 0 &&
+              staticComplexityVariation.length > 0 && (
+                <div className="flex items-start">
+                  <span className="inline-block w-2 h-2 bg-gray-900 rounded-full mt-2 mr-3"></span>
+                  <p className="text-gray-700">
+                    <strong>Complexity Impact:</strong> Performance drops from{" "}
+                    {staticComplexityPerformance[0]?.testPassRate.toFixed(2)}%
+                    (simple) to{" "}
+                    {staticComplexityPerformance[2]?.testPassRate.toFixed(2)}%
+                    (complex), with simple problems showing greater cyclomatic
+                    complexity increase (
+                    {staticComplexityVariation[0]?.deltaCClog.toFixed(2)}Δ vs{" "}
+                    {staticComplexityVariation[2]?.deltaCClog.toFixed(2)}Δ)
+                  </p>
+                </div>
+              )}
             {staticLanguageVariation.length > 0 && (
               <div className="flex items-start">
                 <span className="inline-block w-2 h-2 bg-gray-900 rounded-full mt-2 mr-3"></span>
                 <p className="text-gray-700">
                   <strong>Code Length Variation:</strong>{" "}
                   {staticLanguageVariation[0].name} translations show{" "}
-                  {staticLanguageVariation[0].deltaLOC > 0 ? "an increase" : "a decrease"} (
-                  {staticLanguageVariation[0].deltaLOC > 0 ? "+" : ""}
-                  {staticLanguageVariation[0].deltaLOC.toFixed(2)}Δ) in source lines of code
+                  {staticLanguageVariation[0].deltaLOC > 0
+                    ? "an increase"
+                    : "a decrease"}{" "}
+                  ({staticLanguageVariation[0].deltaLOC > 0 ? "+" : ""}
+                  {staticLanguageVariation[0].deltaLOC.toFixed(2)}Δ) in source
+                  lines of code
                 </p>
               </div>
             )}
@@ -332,14 +357,14 @@ export default function Dashboard() {
               value={`${metrics.testFailRate}%`}
               percentage={metrics.testFailRate}
               isFailureMetric={true}
-              description="Percentage of translations that failed tests"
+              description="Percentage of translations that failed at least one test case"
             />
             <MetricCard
               title="Test Pass Rate"
               value={`${metrics.testPassRate}%`}
               percentage={metrics.testPassRate}
               isFailureMetric={false}
-              description="Percentage of translations that passed all tests"
+              description="Percentage of translations that passed all test cases (100% pass required)"
             />
           </div>
         </div>
