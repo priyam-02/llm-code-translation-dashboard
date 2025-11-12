@@ -14,6 +14,11 @@ import VariationByLanguageChart from "@/components/VariationByLanguageChart";
 import VariationByPromptChart from "@/components/VariationByPromptChart";
 import VariationByLLMChart from "@/components/VariationByLLMChart";
 import {
+  MetricCardSkeleton,
+  ChartSkeleton,
+  FilterPanelSkeleton,
+} from "@/components/Skeleton";
+import {
   filterData,
   calculateMetrics,
   getLLMPerformance,
@@ -30,7 +35,11 @@ import {
 export default function Dashboard() {
   const [data, setData] = useState<BenchmarkResult[]>([]);
   const [staticMetrics, setStaticMetrics] = useState<StaticMetric[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  // Progressive loading states
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
   const [filters, setFilters] = useState<Filters>({
     language: "all",
     llm: "all",
@@ -44,27 +53,13 @@ export default function Dashboard() {
   const [complexities, setComplexities] = useState<string[]>([]);
 
   useEffect(() => {
-    // Load both benchmark data and static metrics in parallel from API routes
-    Promise.all([
-      fetch("/api/benchmark-data").then((res) => res.json()),
-      fetch("/api/static-metrics").then((res) => res.json()),
-    ])
-      .then(([benchmarkResponse, metricsResponse]) => {
-        // Extract data from API response
-        const benchmarkData: BenchmarkResult[] = benchmarkResponse.data;
+    // Load static metrics first (smaller payload - 324KB)
+    fetch("/api/static-metrics")
+      .then((res) => res.json())
+      .then((metricsResponse) => {
         const metricsData: StaticMetric[] = metricsResponse.data;
-
-        // Log data source for debugging
-        console.log("Benchmark data source:", benchmarkResponse.source);
         console.log("Static metrics source:", metricsResponse.source);
 
-        // Show warning if using fallback data
-        if (benchmarkResponse.source === "fallback-json") {
-          console.warn(
-            "⚠️ Using fallback benchmark data:",
-            benchmarkResponse.warning
-          );
-        }
         if (metricsResponse.source === "fallback-json") {
           console.warn(
             "⚠️ Using fallback metrics data:",
@@ -72,8 +67,29 @@ export default function Dashboard() {
           );
         }
 
-        setData(benchmarkData);
         setStaticMetrics(metricsData);
+        setIsLoadingMetrics(false);
+      })
+      .catch((error) => {
+        console.error("Error loading metrics:", error);
+        setIsLoadingMetrics(false);
+      });
+
+    // Load benchmark data (larger payload - 29MB)
+    fetch("/api/benchmark-data")
+      .then((res) => res.json())
+      .then((benchmarkResponse) => {
+        const benchmarkData: BenchmarkResult[] = benchmarkResponse.data;
+        console.log("Benchmark data source:", benchmarkResponse.source);
+
+        if (benchmarkResponse.source === "fallback-json") {
+          console.warn(
+            "⚠️ Using fallback benchmark data:",
+            benchmarkResponse.warning
+          );
+        }
+
+        setData(benchmarkData);
         setLanguages(
           Array.from(
             new Set(benchmarkData.map((d) => d.target_language))
@@ -84,68 +100,90 @@ export default function Dashboard() {
           Array.from(new Set(benchmarkData.map((d) => d.prompt))).sort()
         );
         setComplexities(["simple", "moderate", "complex"]);
-        setLoading(false);
+        setIsLoadingData(false);
       })
       .catch((error) => {
         console.error("Error loading data:", error);
-        setLoading(false);
+        setIsLoadingData(false);
       });
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading benchmark data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Static insights - always use full dataset (all filters = "all")
-  const staticLLMPerformance = getLLMPerformance(data);
-  const staticComplexityPerformance = getComplexityPerformance(data);
-  const staticLanguagePerformance = getLanguagePerformance(data);
-  const staticPromptPerformance = getPromptPerformance(data);
+  // Computed data - only calculate when data is available
+  const staticLLMPerformance = data.length > 0 ? getLLMPerformance(data) : [];
+  const staticComplexityPerformance =
+    data.length > 0 ? getComplexityPerformance(data) : [];
+  const staticLanguagePerformance =
+    data.length > 0 ? getLanguagePerformance(data) : [];
+  const staticPromptPerformance =
+    data.length > 0 ? getPromptPerformance(data) : [];
 
   // Filtered data for charts and metrics
-  const filteredData = filterData(data, filters);
-  const metrics = calculateMetrics(filteredData);
-  const llmPerformance = getLLMPerformance(filteredData);
-  const complexityPerformance = getComplexityPerformance(filteredData);
-  const languagePerformance = getLanguagePerformance(filteredData);
-  const promptPerformance = getPromptPerformance(filteredData);
-  const heatmapData = getHeatmapData(filteredData);
+  const filteredData = data.length > 0 ? filterData(data, filters) : [];
+  const metrics =
+    data.length > 0
+      ? calculateMetrics(filteredData)
+      : {
+          totalTranslations: 0,
+          uniqueProblems: 0,
+          compileFailRate: 0,
+          runtimeFailRate: 0,
+          testFailRate: 0,
+          testPassRate: 0,
+        };
+  const llmPerformance =
+    data.length > 0 ? getLLMPerformance(filteredData) : [];
+  const complexityPerformance =
+    data.length > 0 ? getComplexityPerformance(filteredData) : [];
+  const languagePerformance =
+    data.length > 0 ? getLanguagePerformance(filteredData) : [];
+  const promptPerformance =
+    data.length > 0 ? getPromptPerformance(filteredData) : [];
+  const heatmapData = data.length > 0 ? getHeatmapData(filteredData) : [];
 
   // Variation data from static metrics (static - for key insights)
-  const staticComplexityVariation = getComplexityVariationData(staticMetrics, {
-    language: "all",
-    llm: "all",
-    prompt: "all",
-    complexity: "all",
-  });
-  const staticLanguageVariation = getLanguageVariationData(staticMetrics, {
-    language: "all",
-    llm: "all",
-    prompt: "all",
-    complexity: "all",
-  });
-  const staticPromptVariation = getPromptVariationData(staticMetrics, {
-    language: "all",
-    llm: "all",
-    prompt: "all",
-    complexity: "all",
-  });
+  const staticComplexityVariation =
+    staticMetrics.length > 0
+      ? getComplexityVariationData(staticMetrics, {
+          language: "all",
+          llm: "all",
+          prompt: "all",
+          complexity: "all",
+        })
+      : [];
+  const staticLanguageVariation =
+    staticMetrics.length > 0
+      ? getLanguageVariationData(staticMetrics, {
+          language: "all",
+          llm: "all",
+          prompt: "all",
+          complexity: "all",
+        })
+      : [];
+  const staticPromptVariation =
+    staticMetrics.length > 0
+      ? getPromptVariationData(staticMetrics, {
+          language: "all",
+          llm: "all",
+          prompt: "all",
+          complexity: "all",
+        })
+      : [];
 
   // Variation data from static metrics (filtered)
-  const complexityVariation = getComplexityVariationData(
-    staticMetrics,
-    filters
-  );
-  const languageVariation = getLanguageVariationData(staticMetrics, filters);
-  const promptVariation = getPromptVariationData(staticMetrics, filters);
-  const llmVariation = getLLMVariationData(staticMetrics, filters);
+  const complexityVariation =
+    staticMetrics.length > 0
+      ? getComplexityVariationData(staticMetrics, filters)
+      : [];
+  const languageVariation =
+    staticMetrics.length > 0
+      ? getLanguageVariationData(staticMetrics, filters)
+      : [];
+  const promptVariation =
+    staticMetrics.length > 0
+      ? getPromptVariationData(staticMetrics, filters)
+      : [];
+  const llmVariation =
+    staticMetrics.length > 0 ? getLLMVariationData(staticMetrics, filters) : [];
 
   return (
     <div className="min-h-screen">
@@ -313,60 +351,81 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="sticky top-0 z-10 mb-10 glass rounded-xl shadow-lg border border-white/20">
-          <FilterPanel
-            filters={filters}
-            onFilterChange={setFilters}
-            languages={languages}
-            llms={llms}
-            prompts={prompts}
-            complexities={complexities}
-          />
+        <div className="sticky top-0 z-10 mb-10">
+          {isLoadingData ? (
+            <FilterPanelSkeleton />
+          ) : (
+            <FilterPanel
+              filters={filters}
+              onFilterChange={setFilters}
+              languages={languages}
+              llms={llms}
+              prompts={prompts}
+              complexities={complexities}
+            />
+          )}
         </div>
 
         <div className="mb-8 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <MetricCard
-              title="Total Translations"
-              value={metrics.totalTranslations.toLocaleString()}
-              description="Total number of code translations in filtered dataset"
-            />
-            <MetricCard
-              title="Unique Problems"
-              value={metrics.uniqueProblems.toLocaleString()}
-              description="Number of unique problems in filtered dataset"
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <MetricCard
-              title="Fail Compilation"
-              value={`${metrics.compileFailRate}%`}
-              percentage={metrics.compileFailRate}
-              isFailureMetric={true}
-              description="Percentage of translations that failed to compile"
-            />
-            <MetricCard
-              title="Fail Running"
-              value={`${metrics.runtimeFailRate}%`}
-              percentage={metrics.runtimeFailRate}
-              isFailureMetric={true}
-              description="Percentage of translations that failed during runtime"
-            />
-            <MetricCard
-              title="Fail Test"
-              value={`${metrics.testFailRate}%`}
-              percentage={metrics.testFailRate}
-              isFailureMetric={true}
-              description="Percentage of translations that failed at least one test case"
-            />
-            <MetricCard
-              title="Test Pass Rate"
-              value={`${metrics.testPassRate}%`}
-              percentage={metrics.testPassRate}
-              isFailureMetric={false}
-              description="Percentage of translations that passed all test cases (100% pass required)"
-            />
-          </div>
+          {isLoadingData ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <MetricCardSkeleton />
+                <MetricCardSkeleton />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <MetricCardSkeleton />
+                <MetricCardSkeleton />
+                <MetricCardSkeleton />
+                <MetricCardSkeleton />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <MetricCard
+                  title="Total Translations"
+                  value={metrics.totalTranslations.toLocaleString()}
+                  description="Total number of code translations in filtered dataset"
+                />
+                <MetricCard
+                  title="Unique Problems"
+                  value={metrics.uniqueProblems.toLocaleString()}
+                  description="Number of unique problems in filtered dataset"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <MetricCard
+                  title="Fail Compilation"
+                  value={`${metrics.compileFailRate}%`}
+                  percentage={metrics.compileFailRate}
+                  isFailureMetric={true}
+                  description="Percentage of translations that failed to compile"
+                />
+                <MetricCard
+                  title="Fail Running"
+                  value={`${metrics.runtimeFailRate}%`}
+                  percentage={metrics.runtimeFailRate}
+                  isFailureMetric={true}
+                  description="Percentage of translations that failed during runtime"
+                />
+                <MetricCard
+                  title="Fail Test"
+                  value={`${metrics.testFailRate}%`}
+                  percentage={metrics.testFailRate}
+                  isFailureMetric={true}
+                  description="Percentage of translations that failed at least one test case"
+                />
+                <MetricCard
+                  title="Test Pass Rate"
+                  value={`${metrics.testPassRate}%`}
+                  percentage={metrics.testPassRate}
+                  isFailureMetric={false}
+                  description="Percentage of translations that passed all test cases (100% pass required)"
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Performance Analysis Section */}
@@ -380,17 +439,29 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="space-y-8">
-          <LLMPerformanceChart data={llmPerformance} filters={filters} />
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <ComplexityChart data={complexityPerformance} />
-            <LanguageChart data={languagePerformance} filters={filters} />
+        {isLoadingData ? (
+          <div className="space-y-8">
+            <ChartSkeleton height="400px" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <ChartSkeleton height="400px" />
+              <ChartSkeleton height="400px" />
+            </div>
+            <ChartSkeleton height="400px" />
+            <ChartSkeleton height="500px" />
           </div>
+        ) : (
+          <div className="space-y-8">
+            <LLMPerformanceChart data={llmPerformance} filters={filters} />
 
-          <PromptChart data={promptPerformance} filters={filters} />
-          <HeatmapChart data={heatmapData} />
-        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <ComplexityChart data={complexityPerformance} />
+              <LanguageChart data={languagePerformance} filters={filters} />
+            </div>
+
+            <PromptChart data={promptPerformance} filters={filters} />
+            <HeatmapChart data={heatmapData} />
+          </div>
+        )}
 
         {/* Code Variation Analysis Section */}
         <div className="mt-12 mb-10 glass rounded-2xl shadow-lg p-6 border border-white/20 fade-in">
@@ -403,23 +474,36 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <ComplexityVariationChart
-              data={complexityVariation}
-              filters={filters}
-            />
-            <VariationByLanguageChart
-              data={languageVariation}
-              filters={filters}
-            />
+        {isLoadingMetrics ? (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <ChartSkeleton height="500px" />
+              <ChartSkeleton height="500px" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <ChartSkeleton height="500px" />
+              <ChartSkeleton height="500px" />
+            </div>
           </div>
+        ) : (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <ComplexityVariationChart
+                data={complexityVariation}
+                filters={filters}
+              />
+              <VariationByLanguageChart
+                data={languageVariation}
+                filters={filters}
+              />
+            </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <VariationByPromptChart data={promptVariation} filters={filters} />
-            <VariationByLLMChart data={llmVariation} filters={filters} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <VariationByPromptChart data={promptVariation} filters={filters} />
+              <VariationByLLMChart data={llmVariation} filters={filters} />
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
       <footer className="mt-16 py-8 border-t border-white/10">

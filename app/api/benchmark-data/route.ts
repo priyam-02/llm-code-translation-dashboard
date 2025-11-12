@@ -3,7 +3,8 @@ import { fetchBenchmarkData } from '@/lib/google-sheets';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-export const dynamic = 'force-dynamic'; // Disable caching for fresh data
+// Enable caching with 1-hour revalidation for better performance
+export const revalidate = 3600; // 1 hour in seconds
 
 export async function GET() {
   try {
