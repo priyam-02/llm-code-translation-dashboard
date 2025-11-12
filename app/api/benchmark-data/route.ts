@@ -3,8 +3,9 @@ import { fetchBenchmarkData } from '@/lib/google-sheets';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-// Enable caching with 1-hour revalidation for better performance
-export const revalidate = 3600; // 1 hour in seconds
+// Disable static generation - response is too large for Vercel ISR (>19MB limit)
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 export async function GET() {
   try {
@@ -14,12 +15,19 @@ export async function GET() {
 
     console.log(`Successfully fetched ${data.length} records from Google Sheets`);
 
-    return NextResponse.json({
-      data: data,
-      source: 'google-sheets',
-      timestamp: new Date().toISOString(),
-      count: data.length,
-    });
+    return NextResponse.json(
+      {
+        data: data,
+        source: 'google-sheets',
+        timestamp: new Date().toISOString(),
+        count: data.length,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200',
+        },
+      }
+    );
   } catch (error) {
     // Fallback to local JSON file
     console.error('Google Sheets fetch failed, falling back to local JSON:', error);
@@ -31,14 +39,21 @@ export async function GET() {
 
       console.log(`Successfully loaded ${fallbackData.length} records from fallback JSON`);
 
-      return NextResponse.json({
-        data: fallbackData,
-        source: 'fallback-json',
-        timestamp: new Date().toISOString(),
-        count: fallbackData.length,
-        warning: 'Using cached data due to Google Sheets API error',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      return NextResponse.json(
+        {
+          data: fallbackData,
+          source: 'fallback-json',
+          timestamp: new Date().toISOString(),
+          count: fallbackData.length,
+          warning: 'Using cached data due to Google Sheets API error',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+        {
+          headers: {
+            'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200',
+          },
+        }
+      );
     } catch (fallbackError) {
       // If even fallback fails, return error
       console.error('Fallback JSON also failed:', fallbackError);
