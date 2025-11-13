@@ -5,7 +5,6 @@ import path from 'path';
 
 // Disable static generation - response is too large for Vercel ISR (>19MB limit)
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
 
 export async function GET() {
   try {
