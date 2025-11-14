@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import { VariationData } from "@/types";
 import { Filters } from "@/types";
@@ -65,9 +66,13 @@ export default function VariationByLanguageChart({
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="name" />
-          <YAxis label={{ value: "Variation", angle: -90, position: "insideLeft" }} />
+          <YAxis
+            label={{ value: "Variation", angle: -90, position: "insideLeft" }}
+            domain={['auto', 'auto']}
+          />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
+          <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={2} strokeDasharray="3 3" />
           <Bar
             dataKey="deltaCClog"
             fill="#6366f1"

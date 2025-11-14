@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import { VariationData } from "@/types";
 import { Filters } from "@/types";
@@ -68,10 +69,11 @@ export default function VariationByPromptChart({
           barCategoryGap="20%"
         >
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis type="number" />
+          <XAxis type="number" domain={['auto', 'auto']} />
           <YAxis type="category" dataKey="name" width={140} />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
+          <ReferenceLine x={0} stroke="#94a3b8" strokeWidth={2} strokeDasharray="3 3" />
           <Bar
             dataKey="deltaCClog"
             fill="#6366f1"

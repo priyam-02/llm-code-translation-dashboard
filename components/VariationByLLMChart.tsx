@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import { VariationData } from "@/types";
 import { Filters } from "@/types";
@@ -82,9 +83,11 @@ export default function VariationByLLMChart({
               offset: 10,
             }}
             tick={{ fontSize: 12 }}
+            domain={['auto', 'auto']}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend wrapperStyle={{ paddingTop: "20px" }} />
+          <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={2} strokeDasharray="3 3" />
           <Bar
             dataKey="deltaCClog"
             fill="#6366f1"

@@ -21,6 +21,7 @@ import {
 import {
   filterData,
   calculateMetrics,
+  calculateVariationMetrics,
   getLLMPerformance,
   getComplexityPerformance,
   getLanguagePerformance,
@@ -143,6 +144,17 @@ export default function Dashboard() {
           runtimeFailRate: 0,
           testFailRate: 0,
           testPassRate: 0,
+        };
+  const variationMetrics =
+    staticMetrics.length > 0
+      ? calculateVariationMetrics(staticMetrics, filters)
+      : {
+          avgDeltaCClog: 0,
+          avgDeltaLOC: 0,
+          minDeltaCC: 0,
+          maxDeltaCC: 0,
+          minDeltaLOC: 0,
+          maxDeltaLOC: 0,
         };
   const llmPerformance = data.length > 0 ? getLLMPerformance(filteredData) : [];
   const complexityPerformance =
@@ -289,7 +301,8 @@ export default function Dashboard() {
             <div className="mt-4 pt-4 border-t border-gray-200/60">
               <p className="text-sm text-gray-600 italic flex items-center gap-2">
                 <span className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
-                This is a living dataset — new results and analyses will be added soon. Check back regularly for updates!
+                This is a living dataset — new results and analyses will be
+                added soon. Check back regularly for updates!
               </p>
             </div>
           </div>
@@ -414,10 +427,16 @@ export default function Dashboard() {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             Code Variation Analysis
           </h2>
-          <p className="text-sm text-gray-600 mb-6">
+          <p className="text-sm text-gray-600 mb-4">
             Analyze how translated code differs from source code in terms of
             cyclomatic complexity (ΔCC) and source lines of code (ΔSLoC).
           </p>
+          <div className="pt-4 border-t border-gray-200/60">
+            <p className="text-sm text-gray-600 italic flex items-center gap-2">
+              <span className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+              Metrics and charts in this section use pre-aggregated data across all versions. Version filter applies only to Performance Analysis above.
+            </p>
+          </div>
         </div>
 
         {isLoadingMetrics ? (

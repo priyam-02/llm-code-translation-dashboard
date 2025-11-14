@@ -56,6 +56,46 @@ export function calculateMetrics(data: BenchmarkResult[]) {
   };
 }
 
+export function calculateVariationMetrics(metrics: StaticMetric[], filters: Filters) {
+  // Map prompt filter value to Google Sheets abbreviation
+  const promptMapping: { [key: string]: string } = {
+    'standard zero-shot': 'S-ZS',
+    'curated zero-shot': 'C-ZS',
+    'chain-of-thought': 'CoT',
+    'all': 'all',
+  };
+  const promptValue = promptMapping[filters.prompt] || filters.prompt;
+
+  // Find the metric row that matches current filters with all='all' for unspecified dimensions
+  const metric = metrics.find(
+    (m) =>
+      m.Language === (filters.language === "all" ? "all" : filters.language) &&
+      m.LLM === (filters.llm === "all" ? "all" : filters.llm) &&
+      m.Prompt === promptValue &&
+      m.Complexity === (filters.complexity === "all" ? "all" : filters.complexity)
+  );
+
+  if (!metric) {
+    return {
+      avgDeltaCClog: 0,
+      avgDeltaLOC: 0,
+      minDeltaCC: 0,
+      maxDeltaCC: 0,
+      minDeltaLOC: 0,
+      maxDeltaLOC: 0,
+    };
+  }
+
+  return {
+    avgDeltaCClog: Math.round((metric.DeltaCClog || 0) * 100) / 100,
+    avgDeltaLOC: Math.round((metric.DeltaLOC || 0) * 100) / 100,
+    minDeltaCC: metric.MinDeltaCC || 0,
+    maxDeltaCC: metric.MaxDeltaCC || 0,
+    minDeltaLOC: metric.MinDeltaLOC || 0,
+    maxDeltaLOC: metric.MaxDeltaLOC || 0,
+  };
+}
+
 export function getLLMPerformance(data: BenchmarkResult[]) {
   const llmGroups: { [key: string]: BenchmarkResult[] } = {};
 
