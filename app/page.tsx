@@ -434,7 +434,7 @@ export default function Dashboard() {
           <div className="pt-4 border-t border-gray-200/60">
             <p className="text-sm text-gray-600 italic flex items-center gap-2">
               <span className="inline-block w-1.5 h-1.5 bg-primary-500 rounded-full animate-pulse"></span>
-              Metrics and charts in this section use pre-aggregated data across all versions. Version filter applies only to Performance Analysis above.
+              Metrics and charts in this section use pre-aggregated data across all versions. Version filter applies only to Performance Analysis above (this will be improved in the future).
             </p>
           </div>
         </div>
