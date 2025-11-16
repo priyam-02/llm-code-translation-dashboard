@@ -98,7 +98,7 @@ export default function FilterPanel({
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
           >
-            <option value="all">All Languages</option>
+            <option value="all">All Target Languages</option>
             {languages.map((lang) => (
               <option key={lang} value={lang}>
                 {lang.charAt(0).toUpperCase() + lang.slice(1)}
